@@ -19,6 +19,10 @@
 #include "components/DAP/include/spi_switch.h"
 #include "components/DAP/include/gpio_common.h"
 
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+#include "hal/cpu_ll.h"
+#endif
+
 #ifdef CONFIG_IDF_TARGET_ESP8266
     #define DAP_SPI SPI1
 #elif defined CONFIG_IDF_TARGET_ESP32
@@ -370,6 +374,9 @@ void DAP_SPI_Init()
     gpio_ll_iomux_in(&GPIO, GPIO_NUM_11,FSPID_IN_IDX);
     gpio_ll_iomux_out(&GPIO, GPIO_NUM_11, FUNC_GPIO11_FSPID, 0);
 
+    GPIO.func_out_sel_cfg[GPIO_NUM_11].oen_sel = 0;
+    GPIO.func_out_sel_cfg[GPIO_NUM_12].oen_sel = 0;
+
     // Not using DMA
     DAP_SPI.user.usr_conf_nxt = 0;
     DAP_SPI.slave.usr_conf = 0;
@@ -476,11 +483,17 @@ __FORCEINLINE void DAP_SPI_Deinit()
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[6], PIN_FUNC_GPIO);
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[7], PIN_FUNC_GPIO); // MOSI
 
-    // enable SWCLK output
-    GPIO.enable_w1ts.enable_w1ts = 0x01 << 6;
+    GPIO.func_out_sel_cfg[GPIO_NUM_6].func_sel = CPU_GPIO_OUT1_IDX;
+    GPIO.func_out_sel_cfg[GPIO_NUM_6].oen_sel = 0;
 
-    // enable MOSI output & input
-    GPIO.enable_w1ts.enable_w1ts = 0x1 << 7;
+    GPIO.func_out_sel_cfg[GPIO_NUM_7].func_sel = CPU_GPIO_OUT0_IDX;
+    GPIO.func_out_sel_cfg[GPIO_NUM_7].oen_sel = 0;
+
+    GPIO.func_in_sel_cfg[CPU_GPIO_IN0_IDX].sig_in_sel = 1;
+    GPIO.func_in_sel_cfg[CPU_GPIO_IN0_IDX].func_sel = GPIO_NUM_7;
+
+    // enable SWCLK/MOSI output
+    RV_WRITE_CSR(CSR_GPIO_OEN_USER, 3);
     PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[7]);
 }
 #elif defined CONFIG_IDF_TARGET_ESP32S3
@@ -489,11 +502,19 @@ __FORCEINLINE void DAP_SPI_Deinit()
     gpio_ll_iomux_func_sel(GPIO_PIN_MUX_REG[GPIO_NUM_12], PIN_FUNC_GPIO);
     gpio_ll_iomux_func_sel(GPIO_PIN_MUX_REG[GPIO_NUM_11], PIN_FUNC_GPIO); // MOSI
 
-    // enable SWCLK output
+    // SWCLK output
+    GPIO.func_out_sel_cfg[GPIO_NUM_12].func_sel = CORE1_GPIO_OUT1_IDX;
+    GPIO.func_out_sel_cfg[GPIO_NUM_12].oen_sel = 1;
     gpio_ll_output_enable(&GPIO, GPIO_NUM_12);
 
-    // enable MOSI output & input
-    GPIO.enable_w1ts = 0x1 << GPIO_NUM_11;
+    // SWDIO outout
+    GPIO.func_out_sel_cfg[GPIO_NUM_11].func_sel = CORE1_GPIO_OUT0_IDX;
+    GPIO.func_out_sel_cfg[GPIO_NUM_11].oen_sel = 1;
+    gpio_ll_output_enable(&GPIO, GPIO_NUM_11);
+
+    // SWDIO input
+    GPIO.func_in_sel_cfg[CORE1_GPIO_IN0_IDX].sig_in_sel = 1;
+    GPIO.func_in_sel_cfg[CORE1_GPIO_IN0_IDX].func_sel = GPIO_NUM_11;
     gpio_ll_input_enable(&GPIO, GPIO_NUM_11);
 }
 #endif

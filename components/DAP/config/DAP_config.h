@@ -213,6 +213,8 @@ static const char TargetBoardVendor  [] = TARGET_BOARD_VENDOR;
 static const char TargetBoardName    [] = TARGET_BOARD_NAME;
 #endif
 
+#define osDelay(n) dap_os_delay(n)
+
 /**
  * @brief Get Vendor ID string.
  *
@@ -649,7 +651,11 @@ __STATIC_FORCEINLINE uint32_t PIN_SWCLK_TCK_IN(void)
  */
 __STATIC_FORCEINLINE void PIN_SWCLK_TCK_SET(void)
 {
+#ifdef SWCLK_SET
+  SWCLK_SET();
+#else
   GPIO_SET_LEVEL_HIGH(PIN_SWCLK);
+#endif
 }
 
 /**
@@ -659,7 +665,11 @@ __STATIC_FORCEINLINE void PIN_SWCLK_TCK_SET(void)
  */
 __STATIC_FORCEINLINE void PIN_SWCLK_TCK_CLR(void)
 {
+#ifdef SWCLK_CLR
+  SWCLK_CLR();
+#else
   GPIO_SET_LEVEL_LOW(PIN_SWCLK);
+#endif
 }
 
 // SWDIO/TMS Pin I/O --------------------------------------
@@ -672,7 +682,11 @@ __STATIC_FORCEINLINE void PIN_SWCLK_TCK_CLR(void)
 __STATIC_FORCEINLINE uint32_t PIN_SWDIO_TMS_IN(void)
 {
   // Note that we only use mosi in GPIO mode
+#ifdef SWDIO_GET_IN
+  return SWDIO_GET_IN();
+#else
   return GPIO_GET_LEVEL(PIN_SWDIO_MOSI);
+#endif
 }
 
 /**
@@ -682,7 +696,11 @@ __STATIC_FORCEINLINE uint32_t PIN_SWDIO_TMS_IN(void)
  */
 __STATIC_FORCEINLINE void PIN_SWDIO_TMS_SET(void)
 {
+#ifdef SWDIO_SET
+  SWDIO_SET();
+#else
   GPIO_SET_LEVEL_HIGH(PIN_SWDIO_MOSI);
+#endif
 }
 
 /**
@@ -692,7 +710,11 @@ __STATIC_FORCEINLINE void PIN_SWDIO_TMS_SET(void)
  */
 __STATIC_FORCEINLINE void PIN_SWDIO_TMS_CLR(void)
 {
+#ifdef SWDIO_CLR
+  SWDIO_CLR();
+#else
   GPIO_SET_LEVEL_LOW(PIN_SWDIO_MOSI);
+#endif
 }
 
 /**
@@ -702,8 +724,7 @@ __STATIC_FORCEINLINE void PIN_SWDIO_TMS_CLR(void)
  */
 __STATIC_FORCEINLINE uint32_t PIN_SWDIO_IN(void)
 {
-  // Note that we only use mosi in GPIO mode
-  return GPIO_GET_LEVEL(PIN_SWDIO_MOSI);
+  return PIN_SWDIO_TMS_IN();
 }
 
 /**
@@ -721,15 +742,11 @@ __STATIC_FORCEINLINE void PIN_SWDIO_OUT(uint32_t bit)
 	  */
   if ((bit & 1U) == 1)
   {
-    //set bit
-    GPIO_SET_LEVEL_HIGH(PIN_SWDIO_MOSI);
-
+    PIN_SWDIO_TMS_SET();
   }
   else
   {
-    //reset bit
-    GPIO_SET_LEVEL_LOW(PIN_SWDIO_MOSI);
-
+    PIN_SWDIO_TMS_CLR();
   }
 }
 
@@ -746,7 +763,8 @@ __STATIC_FORCEINLINE void PIN_SWDIO_OUT_ENABLE(void)
 #elif defined CONFIG_IDF_TARGET_ESP32
   GPIO.enable_w1ts = 0x01 << PIN_SWDIO_MOSI;
 #elif defined CONFIG_IDF_TARGET_ESP32C3
-  GPIO.enable_w1ts.enable_w1ts = 0x01 << PIN_SWDIO_MOSI;
+  SWDIO_OUT_ENABLE();
+#elif defined CONFIG_IDF_TARGET_ESP32S3
 #endif
 }
 
@@ -764,11 +782,8 @@ __STATIC_FORCEINLINE void PIN_SWDIO_OUT_DISABLE(void)
   // Note that the input of esp32 is not always connected.
   GPIO.enable_w1tc = 0x01 << PIN_SWDIO_MOSI;
 #elif defined CONFIG_IDF_TARGET_ESP32C3
-  GPIO.enable_w1tc.enable_w1tc = 0x01 << PIN_SWDIO_MOSI;
+  SWDIO_OUT_DISABLE();
 #elif defined CONFIG_IDF_TARGET_ESP32S3
-  // Note that the input is not always connected.
-  gpio_ll_input_enable(&GPIO, PIN_SWDIO_MOSI);
-  gpio_ll_set_level(&GPIO, PIN_SWDIO_MOSI, 1);
 #endif
 }
 
@@ -1002,15 +1017,16 @@ __STATIC_INLINE void DAP_SETUP(void)
   GPIO_FUNCTION_SET(PIN_nTRST);
   GPIO_FUNCTION_SET(PIN_nRESET);
 
-  // GPIO_FUNCTION_SET(PIN_LED_RUNNING);
-
-
-  // Configure: LED as output (turned off)
-
-  // GPIO_SET_DIRECTION_NORMAL_OUT(PIN_LED_RUNNING);
-
-  // LED_CONNECTED_OUT(0);
-  // LED_RUNNING_OUT(0);
+  /**
+   * The drive strength has a significant impact on signal integrity.
+   * In actual use, it is necessary to perform signal measurements
+   * on the board and select the appropriate drive strength.
+   */
+#if defined (CONFIG_IDF_TARGET_ESP32S3) || defined (CONFIG_IDF_TARGET_ESP32C3)
+  // 5mA for esp32c3/esp32s3
+  gpio_ll_set_drive_capability(&GPIO, PIN_SWCLK, GPIO_DRIVE_CAP_0);
+  gpio_ll_set_drive_capability(&GPIO, PIN_SWDIO_MOSI, GPIO_DRIVE_CAP_0);
+#endif
 
   PORT_OFF();
 }
