@@ -15,7 +15,7 @@ static struct {
     const char *ssid;
     const char *password;
 } wifi_list[] __attribute__((unused)) = {
-    {.ssid = "Redmi_376E", .password = "dssuehdujhbcw"},
+    {.ssid = "Redmi_376E", .password = "13186808956"},
     // Add your WAP like this:
     // {.ssid = "your ssid", .password = "your password"},
 };
@@ -35,9 +35,9 @@ static struct {
 #define DAP_IP_NETMASK 255, 255, 255, 0
 //
 
-#define USE_OTA              1
+#define USE_OTA              0
 
-#define USE_UART_BRIDGE      1
+#define USE_UART_BRIDGE      0
 #define UART_BRIDGE_PORT     1234
 #define UART_BRIDGE_BAUDRATE 74880
 //
