@@ -16,6 +16,7 @@ static struct {
     const char *password;
 } wifi_list[] __attribute__((unused)) = {
     {.ssid = "Wwrs", .password = "Likw5C!JXZM.ihE"},
+    {.ssid = "Redmi_376E", .password = "13186808956"},
     // Add your WAP like this:
     // {.ssid = "your ssid", .password = "your password"},
 };
@@ -37,9 +38,9 @@ static struct {
 
 #define USE_OTA              1
 
-#define USE_UART_BRIDGE      0
+#define USE_UART_BRIDGE      1
 #define UART_BRIDGE_PORT     1234
-#define UART_BRIDGE_BAUDRATE 74880
+#define UART_BRIDGE_BAUDRATE 115200
 //
 
 // DO NOT CHANGE
